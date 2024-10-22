@@ -40,6 +40,37 @@ fn field_path_exists<'a>(
     }
 }
 
+fn field_path_exists_anywhere<'a>(
+    selection: &Selection<'a, &'a str>,
+    path: &[&str],
+) -> bool {
+    // Check if the field path exists starting from the current selection
+    if field_path_exists(selection, path) {
+        return true;
+    }
+
+    // Recurse into child selections
+    match selection {
+        Selection::Field(field) => {
+            for sel in &field.selection_set.items {
+                if field_path_exists_anywhere(sel, path) {
+                    return true;
+                }
+            }
+            false
+        }
+        Selection::InlineFragment(fragment) => {
+            for sel in &fragment.selection_set.items {
+                if field_path_exists_anywhere(sel, path) {
+                    return true;
+                }
+            }
+            false
+        }
+        Selection::FragmentSpread(_) => false,
+    }
+}
+
 fn query_contains_path<'a>(entry: &walkdir::DirEntry, query: &'a str, path: &[&str], verbose: bool) -> bool {
     let ast = match parse_query::<&'a str>(query) {
         Ok(ast) => ast,
@@ -59,7 +90,7 @@ fn query_contains_path<'a>(entry: &walkdir::DirEntry, query: &'a str, path: &[&s
                     if selection_set
                         .items
                         .iter()
-                        .any(|sel| field_path_exists(sel, path))
+                        .any(|sel| field_path_exists_anywhere(sel, path))
                     {
                         return true;
                     }
@@ -69,7 +100,7 @@ fn query_contains_path<'a>(entry: &walkdir::DirEntry, query: &'a str, path: &[&s
                         .selection_set
                         .items
                         .iter()
-                        .any(|sel| field_path_exists(sel, path))
+                        .any(|sel| field_path_exists_anywhere(sel, path))
                     {
                         return true;
                     }
@@ -79,7 +110,7 @@ fn query_contains_path<'a>(entry: &walkdir::DirEntry, query: &'a str, path: &[&s
                         .selection_set
                         .items
                         .iter()
-                        .any(|sel| field_path_exists(sel, path))
+                        .any(|sel| field_path_exists_anywhere(sel, path))
                     {
                         return true;
                     }
@@ -89,7 +120,7 @@ fn query_contains_path<'a>(entry: &walkdir::DirEntry, query: &'a str, path: &[&s
                         .selection_set
                         .items
                         .iter()
-                        .any(|sel| field_path_exists(sel, path))
+                        .any(|sel| field_path_exists_anywhere(sel, path))
                     {
                         return true;
                     }
@@ -100,7 +131,7 @@ fn query_contains_path<'a>(entry: &walkdir::DirEntry, query: &'a str, path: &[&s
                 .selection_set
                 .items
                 .iter()
-                .any(|sel| field_path_exists(sel, path))
+                .any(|sel| field_path_exists_anywhere(sel, path))
             {
                 return true;
             }
@@ -126,6 +157,16 @@ fn main() {
         .filter_map(|e| e.ok())
         .filter(|e| e.path().is_file())
     {
+        if let Some(ext) = entry.path().extension() {
+            if ext != "js"
+                && ext != "jsx"
+                && ext != "ts"
+                && ext != "tsx"
+                && ext != "graphql"
+            {
+                continue; // Skip non-relevant files
+            }
+        }
         if let Ok(content) = fs::read_to_string(entry.path()) {
             let queries = extract_graphql_queries(&content);
             for query in queries {
