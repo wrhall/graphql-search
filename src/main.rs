@@ -5,7 +5,7 @@ use std::fs;
 use walkdir::WalkDir;
 
 fn extract_graphql_queries(content: &str) -> Vec<String> {
-    let re = Regex::new(r"(?:graphql|gql)`([\s\S]*?)`").unwrap();
+    let re = Regex::new(r"(?:graphql\s*\(|gql\s*)`([\s\S]*?)`").unwrap();
     re.captures_iter(content)
         .map(|cap| cap[1].to_string())
         .collect()
