@@ -1,0 +1,11 @@
+[package]
+name = "graphql-search"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+walkdir = "2.3.2"           # For recursively walking through directories
+regex = "1.5.6"             # For regular expressions
+graphql-parser = "0.4.0"    # For parsing GraphQL queries
